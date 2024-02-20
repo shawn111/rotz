@@ -22,6 +22,7 @@ use crate::{
 #[serde(deny_unknown_fields)]
 struct DotSimplified {
   pub(super) links: Option<HashMap<PathBuf, LinksComplex>>,
+  pub(super) privates: Option<HashMap<PathBuf, LinksComplex>>,
   pub(super) installs: Option<InstallsComplex>,
   pub(super) depends: Option<HashSet<String>>,
 }
@@ -78,6 +79,7 @@ impl From<DotComplex> for DotCanonical {
 #[serde(deny_unknown_fields)]
 struct CapabilitiesComplex {
   pub(super) links: Option<HashMap<PathBuf, LinksComplex>>,
+  pub(super) privates: Option<HashMap<PathBuf, LinksComplex>>,
   pub(super) installs: Option<InstallsComplex>,
   pub(super) depends: Option<HashSet<String>>,
 }
@@ -87,6 +89,7 @@ struct CapabilitiesComplex {
 #[serde(deny_unknown_fields)]
 pub struct CapabilitiesCanonical {
   pub(super) links: Option<HashMap<PathBuf, HashSet<PathBuf>>>,
+  pub(super) privates: Option<HashMap<PathBuf, HashSet<PathBuf>>>,
   pub(super) installs: Option<InstallsCanonical>,
   pub(super) depends: Option<HashSet<String>>,
 }
@@ -97,6 +100,20 @@ impl From<CapabilitiesComplex> for CapabilitiesCanonical {
     Self {
       links: value.links.map(|links| {
         links
+          .into_iter()
+          .map(|l| {
+            (
+              l.0,
+              match l.1 {
+                LinksComplex::One(o) => hash_set!(o),
+                LinksComplex::Many(m) => m,
+              },
+            )
+          })
+          .collect::<HashMap<_, _>>()
+      }),
+      privates: value.privates.map(|privates| {
+        privates
           .into_iter()
           .map(|l| {
             (
@@ -121,6 +138,7 @@ impl From<DotSimplified> for CapabilitiesComplex {
       depends: from.depends,
       installs: from.installs,
       links: from.links,
+      privates: from.privates,
     }
   }
 }
@@ -275,7 +293,7 @@ impl Merge<Option<CapabilitiesCanonical>> for Option<CapabilitiesCanonical> {
 
 impl Merge<Self> for CapabilitiesCanonical {
   #[cfg_attr(feature = "profiling", instrument)]
-  fn merge(mut self, Self { mut links, installs, depends }: Self) -> Self {
+  fn merge(mut self, Self { mut links, privates, installs, depends }: Self) -> Self {
     if let Some(self_links) = &mut self.links {
       if let Some(merge_links) = &mut links {
         for l in &mut *merge_links {

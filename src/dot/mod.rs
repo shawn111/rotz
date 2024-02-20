@@ -46,6 +46,7 @@ impl From<repr::InstallsCanonical> for Option<Installs> {
 #[derive(Default, Clone, Debug)]
 pub struct Dot {
   pub(crate) links: Option<HashMap<PathBuf, HashSet<PathBuf>>>,
+  pub(crate) privates: Option<HashMap<PathBuf, HashSet<PathBuf>>>,
   pub(crate) installs: Option<Installs>,
   pub(crate) depends: Option<HashSet<String>>,
 }
@@ -80,6 +81,7 @@ fn from_str_with_defaults(s: &str, format: FileFormat, defaults: Option<&Capabil
   if let Some(capabilities) = capabilities {
     Dot {
       links: capabilities.links,
+      privates: capabilities.privates,
       installs: capabilities.installs.and_then(Into::into),
       depends: capabilities.depends,
     }
